@@ -21,11 +21,13 @@ void displayResizeImg(std::string path, int oldCols, int oldRows, int newCols, i
 
 int main(int argc, char** const argv)
 {
+	/*
 	//debugging output for command line parsing
 
 	for (int c = 0; c < argc; c++) {
 		printf("argv[ %d ]: %s\n", c, argv[c]);
 	}
+	*/
 
 	//the parameter of the x screen
 	int cParam = 0;
@@ -36,7 +38,7 @@ int main(int argc, char** const argv)
 
 	//work on this later
 	//parsing the argument on the commandline
-	cv::CommandLineParser parser(argc, argv, "{help h ||Prints help}{row r @r|2|takes in row parameter}{col c @c|4|takes in column parameter}");
+	cv::CommandLineParser parser(argc, argv, "{help h ||Prints help}{row r @r|2|takes in row parameter}{col c @c|4|takes in column parameter}{@fileDir||takes in file director}");
 	if (parser.has("h"))
 	{
 		parser.about("\nThis is an image browser program.\n"
@@ -45,23 +47,23 @@ int main(int argc, char** const argv)
 		return 0;
 	}
 	if (parser.has("r")) {
-		printf( "row invoked\n" );
 		rParam = atoi(argv[2]);
 		if (rParam == 0)
 			rParam = 720;		//default parameters
 	}
 	if (parser.has("c")) {
-		printf("column invoked\n");
 		cParam = atoi(argv[4]);
 		if (cParam == 0)
 			cParam = 1080;		//default parameters
 	}
 
-
-	char* rootpath = argv[argc - 1];
 	
+	char* fileDir = argv[argc - 1];
+	
+	/*
 	printf("r: %d\n", rParam);
 	printf("c: %d\n", cParam);
+	*/
 
 	if (!parser.check())
 	{
@@ -72,14 +74,18 @@ int main(int argc, char** const argv)
 	try
 	{
 		std::list <std::string> fileResult;
+
+		//debugging parameter argument output
+		/*
 		for (int c = 0; c < argc; c++) {
-			std::cout << "argv[" << c << "]: " << argv[argc - 1] << std::endl;
+			std::cout << "argv[" << c << "]: " << argv[c] << std::endl;
 		}
+		*/
 
 		if (argc >= 2)
 		{
 			//std::cerr << "usage: " << argv[0] << " image_file" << std::endl;
-			depthfirstapply(rootpath, fileResult);
+			depthfirstapply(fileDir, fileResult);
 		}
 
 		//testing output
@@ -122,6 +128,7 @@ int main(int argc, char** const argv)
 
 			//keypress wait
 			key = cv::waitKeyEx(0);
+			cv::destroyAllWindows();
 
 			if (key == 32 || key == 110) {
 				if (move != vecOfFile.end()) {
@@ -185,9 +192,9 @@ int depthfirstapply(char* path, std::list <std::string> &fileList) {
 
 	while ((direntp = readdir(dirp)) != NULL) {
 		if ((strcmp(direntp->d_name, ".") != 0) && (strcmp(direntp->d_name, "..") != 0)) {
-			printf("dirent->d_name: %s\n", path);
+			//printf("dirent->d_name: %s\n", path);
 			sprintf_s(newPath, "%s\\%s", path, direntp->d_name);
-			printf("newPath: %s\n", newPath);
+			//printf("newPath: %s\n", newPath);
 
 			if (stat(newPath, &statbuf) == -1) {
 				perror("File Stat Error!\n");
@@ -195,7 +202,7 @@ int depthfirstapply(char* path, std::list <std::string> &fileList) {
 			}
 			else {
 				if (S_ISREG(statbuf.st_mode) == 1) {
-					printf("%s is a file.\n", newPath);
+					//printf("%s is a file.\n", newPath);
 
 					fileList.push_back(newPath);
 
@@ -209,7 +216,7 @@ int depthfirstapply(char* path, std::list <std::string> &fileList) {
 
 				}
 				if (S_ISDIR(statbuf.st_mode) == 1) {
-					printf("%s is a directory.\n", newPath);
+					//printf("%s is a directory.\n", newPath);
 					depthfirstapply(newPath, fileList);
 				}
 			}
