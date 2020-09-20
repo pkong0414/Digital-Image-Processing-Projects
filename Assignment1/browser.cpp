@@ -36,9 +36,22 @@ int main(int argc, char** const argv)
 	int key = 0;
 	std::string currentImage;
 
+	const std::string keys =
+	{
+		"{help h usage ?	|      | print this message								}"
+	#ifdef _WIN32
+		"{rows r			|  0   | Max number of rows on screen					}"
+		"{cols c			|  0   | Max number of columns on screen				}"
+	#else
+		"{rows r			| 720  | Max number of rows on screen					}"
+		"{cols c			|1280  | Max number of columns on screen				}"
+	#endif
+		"{@directory		|<none>| Directory that contains the pictures to browse	}"
+	};
+
 	//work on this later
 	//parsing the argument on the commandline
-	cv::CommandLineParser parser(argc, argv, "{help h ||Prints help}{row r @r|2|takes in row parameter}{col c @c|4|takes in column parameter}{@fileDir||takes in file director}");
+	cv::CommandLineParser parser(argc, argv, keys);
 	if (parser.has("h"))
 	{
 		parser.about("\nThis is an image browser program.\n"
@@ -46,17 +59,68 @@ int main(int argc, char** const argv)
 		parser.printMessage();
 		return 0;
 	}
-	if (parser.has("r")) {
-		rParam = atoi(argv[2]);
-		if (rParam == 0)
-			rParam = 720;		//default parameters
-	}
-	if (parser.has("c")) {
-		cParam = atoi(argv[4]);
-		if (cParam == 0)
-			cParam = 1080;		//default parameters
+	rParam = parser.get<uint>("rows");
+	if (rParam == 0)
+		rParam = 720;		//default parameters
+	cParam = parser.get<uint>("cols");
+	if (cParam == 0)
+		cParam = 1080;		//default parameters
+
+	/*
+#pragma once
+
+	// OpenCV command line parser functions
+	// Variable keys accepted by command line parser
+	//!< keys contains possible arguments and their default values
+	//!< rows defaults to 0 in Windows and 720 in Linux or Apple
+	//!< cols defaults to 0 in Windows and 1280 in Linux or Apple
+
+	const std::string keys =
+	{
+		"{help h usage ?	|      | print this message								}"
+	#ifdef _WIN32
+		"{rows r			|  0   | Max number of rows on screen					}"
+		"{cols c			|  0   | Max number of columns on screen				}"
+	#else
+		"{rows r			| 720  | Max number of rows on screen					}"
+		"{cols c			|1280  | Max number of columns on screen				}"
+	#endif
+		"{@directory		|<none>| Directory that contains the pictures to browse	}"
+	};
+	parser.about("Image Browser v1.0");
+	if (parser.has("help") || dir.empty())
+	{
+		parser.printMessage();
+		return (1);
 	}
 
+	// Find the maximum number of rows and columns on screen.  If those
+	// are specified in command line, use those.  Otherwise, use the
+	// default values in case of Linux or Apple, or compute to the maximum
+	// dimensions of primaryt screen in case of Windows.
+
+	maxrows = parser.get<uint>("rows");		//!< Maximum number of rows in display window
+	maxcols = parser.get<uint>("cols");		//!< Maximum number of columns in display window
+
+#ifdef _WIN32
+		// Default for Windows is 0 rows and 0 columns.  If no dimensions are specified,
+		// determine the screen size and use those dimensions as maximum rows/columns.
+
+	if (maxrows == 0 || maxcols == 0)
+	{
+		maxcols = static_cast<int>(GetSystemMetrics(SM_CXSCREEN));
+		maxrows = static_cast<int>(GetSystemMetrics(SM_CYSCREEN));
+	}
+#endif
+
+	// Make sure that the parameters are correctly parsed
+
+	if (!parser.check())
+	{
+			parser.printErrors();
+		return (1);
+	}
+	*/
 	
 	char* fileDir = argv[argc - 1];
 	
@@ -96,8 +160,10 @@ int main(int argc, char** const argv)
 
 
 		move = vecOfFile.begin();
-		while (key != 113) {
+		while (key != 'q') {
 			//case to go next image
+
+			// NOTE: Consider that there may not be a file that is not an image.
 
 			// Read the image
 			cv::Mat image = cv::imread(*move);
@@ -130,7 +196,7 @@ int main(int argc, char** const argv)
 			key = cv::waitKeyEx(0);
 			cv::destroyAllWindows();
 
-			if (key == 32 || key == 110) {
+			if (key == ' ' || key == 'n') {
 				if (move != vecOfFile.end()) {
 					++move;
 				}
@@ -139,7 +205,7 @@ int main(int argc, char** const argv)
 				}
 			}
 			//case to go to previous image
-			if (key == 112) {
+			if (key == 'p') {
 				if (move != vecOfFile.begin()) {
 					move--;
 				}
