@@ -35,7 +35,8 @@ int main(int argc, char** const argv)
 	//row and column parameters
 	int rParam;
 	int cParam;
-
+	bool aspectFlag;
+	bool grayscaleFlag;
 	int key = 0;
 	std::string currentImage;
 
@@ -46,16 +47,16 @@ int main(int argc, char** const argv)
 		"{@indir			|		| Input Directory.																}"
 		"{@outdir			|		| Output Directory.																}"
 		"{aspect a			|	    | if specified preserves the aspect ratio of the images							}"
-		"{grey g			|		| Saves the output images as grayscale [default:saves as input]					}"
-		"{numrows r			|	480	| Maximum number of rows in the output image [default: 480]						}"
-		"{numcols c			|	640	| Maximum number of columns in the output [default: 640]						}"
+		"{gray g			|		| Saves the output images as grayscale [default:saves as input]					}"
+		"{rows r			|	480	| Maximum number of rows in the output image [default: 480]						}"
+		"{cols c			|	640	| Maximum number of columns in the output [default: 640]						}"
 		"{type t			|		| Output img type ( jpg, tif, bmp, or png) [default: original file is retained] }"
 	};
 
 	//work on this later
 	//parsing the argument on the commandline
 	cv::CommandLineParser parser(argc, argv, keys);
-	if (parser.has("h"))
+	if (parser.has("help"))
 	{
 		parser.about("\nThis is an image corpus program.\n");
 		parser.printMessage();
