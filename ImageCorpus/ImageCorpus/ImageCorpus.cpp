@@ -2,10 +2,10 @@
 //
 #include <Windows.h>
 #include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include <opencv2/core/utility.hpp>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -48,16 +48,16 @@ int main(int argc, char** const argv)
 
 	std::string currentImage;
 
-	const cv::String keys =
+	const char* keys =
 	{
-		"{help h usage ?	|       | print this message															}"
-		"{@indir			|<none>	| Input Directory.																}"
-		"{@outdir			|		| Output Directory.																}"
-		"{aspect a			|	    | if specified preserves the aspect ratio of the images							}"
-		"{gray g			|		| Saves the output images as grayscale [default:saves as input]					}"
-		"{rows r			|	480	| Maximum number of rows in the output image [default: 480]						}"
-		"{cols c			|	640	| Maximum number of columns in the output [default: 640]						}"
-		"{type t			|<none>	| Output img type ( jpg, tif, bmp, or png) [0: default original file is retained] }"
+		"{ help h usage ?	|       | print this message															}"
+		"{ @indir			|<none>	| Input Directory.																}"
+		"{ @outdir			|		| Output Directory.																}"
+		"{ a aspect			|		| if specified preserves the aspect ratio of the images							}"
+		"{ g gray			|		| Saves the output images as grayscale [default:saves as input]					}"
+		"{ r rows			|	480	| Maximum number of rows in the output image [default: 480]						}"
+		"{ c cols			|	640	| Maximum number of columns in the output [default: 640]						}"
+		"{ t type			|<none>	| Output img type ( jpg, tif, bmp, or png) [default original file is retained]  }"
 	};
 
 	//work on this later
@@ -67,27 +67,42 @@ int main(int argc, char** const argv)
 	{
 		parser.about("\nThis is an image corpus program.\n");
 		parser.printMessage();
-		return 0;
+		return EXIT_SUCCESS;
 	}
 
-	rParam = parser.get<int>("rows");
-	cParam = parser.get<int>("cols");
+	std::cout << parser.has("a") << std::endl;
+	if (parser.has("a")) {
+		// it appears debug mode will always make parameters true
+		// take note to make it false to test false conditions.
+		aspectFlag = false;
+	}
 
-	printf("row: %d\n", rParam);
-	printf("col: %d\n", cParam);
-
-	if (parser.has("gray")) {
-		//debugging output
-		printf("grayscale initiated!\n");
+	if (parser.has("g")) {
+		
 
 		grayscaleFlag = true;
 	}
-	if (parser.has("aspect")) {
-		//debugging output
+
+	rParam = parser.get<int>("r");
+	cParam = parser.get<int>("c");
+
+	printf("row: %d\n", rParam);
+	printf("col: %d\n", cParam);
+	
+	//debugging output
+	if (grayscaleFlag == true)
+		printf("grayscale initiated!\n");
+
+	//debugging output
+	if (aspectFlag == true)
 		printf("aspect initiated!\n");
 
-		aspectFlag = true;
-	}
+	fileType = parser.get<std::string>("t");
+	if (fileType.find('.') == std::string::npos)
+		//we didn't find the . on the file extension
+		fileType.insert(0, ".");
+
+	printf("fileType: %s\n", fileType.c_str());
 
 	cv::String fileName = parser.get<std::string>(0);
 	std::cout << "fileName: " << fileName << std::endl;
@@ -431,6 +446,21 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 
 		cv::imwrite(save_path, Resized);
 
+		if (fileType.compare("<none>") !=0 ) {
+			save_file.erase( save_file.find("."), save_file.length() - 1 );
+
+			//debug output
+			//printf("%s\n", save_file.c_str());
+
+			save_file.append(fileType);
+		}
+
+
+		// Resized image dimensions
+		std::cout << "\nResized size is: " << Resized.cols << "x" << Resized.rows << std::endl;
+		// Resized pixel size
+		std::cout << "Pixel size: " << Resized.cols * Resized.rows << std::endl << std::endl;
+
 	}
 	if (grayscaleFlag == true) {
 		
@@ -441,6 +471,16 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 
 		// Save a copy of grayscale image in a file on disk.
 		std::string gray_pic_save_path = outDir;
+		save_file.insert( save_file.find_last_of("."), "_gray");
+
+		if (fileType.compare("<none>") != 0) {
+			save_file.erase(save_file.find("."), save_file.length() - 1);
+
+			//debug output
+			//printf("%s\n", save_file.c_str());
+
+			save_file.append(fileType);
+		}
 
 		gray_pic_save_path.append("\\" + save_file);
 
@@ -448,12 +488,14 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 		printf("gray_pic_save_path: %s", gray_pic_save_path.c_str());
 
 		cv::imwrite(gray_pic_save_path, Resized_gray);
+
+		// Resized gray image dimensions
+		std::cout << "\nResized size is: " << Resized_gray.cols << "x" << Resized_gray.rows << std::endl;
+		// Resized gray pixel size
+		std::cout << "Pixel size: " << Resized_gray.cols * Resized_gray.rows << std::endl << std::endl;
 	}
 
-	// Resized image dimensions
-	std::cout << "\nResized size is: " << Resized_gray.cols << "x" << Resized_gray.rows << std::endl;
-	// Resized pixel size
-	std::cout << "Pixel size: " << Resized_gray.cols * Resized_gray.rows << std::endl << std::endl;
+	
 
 
 	//TODO: need to create a way to write metadata.
