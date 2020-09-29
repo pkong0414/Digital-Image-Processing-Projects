@@ -21,7 +21,7 @@
 int depthfirstapply(char* path, std::list <std::string>& fileList);
 
 //we'll probably take the image resizing from assignment1
-void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, int fileType, bool aspectFlag, bool grayscaleFlag);
+void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, std::string fileType, bool aspectFlag, bool grayscaleFlag);
 
 void downScaleImage(std::string path);
 
@@ -40,9 +40,9 @@ int main(int argc, char** const argv)
 	//row and column parameters
 	int rParam;
 	int cParam;
-	bool aspectFlag;
-	bool grayscaleFlag;
-	int type;
+	bool aspectFlag = false;
+	bool grayscaleFlag = false;
+	std::string fileType;
 	int key = 0;
 
 	std::string currentImage;
@@ -52,11 +52,11 @@ int main(int argc, char** const argv)
 		"{help h usage ?	|       | print this message															}"
 		"{@indir			|<none>	| Input Directory.																}"
 		"{@outdir			|		| Output Directory.																}"
-		"{aspect a			|	1   | if specified preserves the aspect ratio of the images							}"
-		"{gray g			|	0	| Saves the output images as grayscale [default:saves as input]					}"
+		"{aspect a			|	    | if specified preserves the aspect ratio of the images							}"
+		"{gray g			|		| Saves the output images as grayscale [default:saves as input]					}"
 		"{rows r			|	480	| Maximum number of rows in the output image [default: 480]						}"
 		"{cols c			|	640	| Maximum number of columns in the output [default: 640]						}"
-		"{type t			|	0	| Output img type ( 1:jpg, 2:tif, 3:bmp, or 4:png) [0: default original file is retained] }"
+		"{@type t			|<none>	| Output img type ( jpg, tif, bmp, or png) [0: default original file is retained] }"
 	};
 
 	//work on this later
@@ -71,7 +71,15 @@ int main(int argc, char** const argv)
 
 	rParam = parser.get<int>("rows");
 	cParam = parser.get<int>("cols");
-
+	if (parser.has("gray")) {
+		grayscaleFlag = true;
+	}
+	if (parser.has("aspect")) {
+		aspectFlag = true;
+	}
+	if (parser.has("type")) {
+		fileType = parser.get<cv::String>(2);
+	}
 	outDir = parser.get<std::string>(1);
 
 	cv::String fileName = parser.get<cv::String>(0);
@@ -84,12 +92,6 @@ int main(int argc, char** const argv)
 	printf("row: %d\n", rParam);
 	printf("col: %d\n", cParam);
 
-	cv::String fileName = parser.get<cv::String>(0);
-	std::cout << "fileName: " << fileName << std::endl;
-
-	char* filePath = new char[sizeof(fileName)];
-	strcpy_s(filePath, sizeof(fileName), fileName.c_str());
-	printf("filePath: %s\n", filePath);
 	if (!parser.check())
 	{
 		parser.printErrors();
@@ -152,7 +154,7 @@ int main(int argc, char** const argv)
 			std::cout << "Pixel size: " << image.cols * image.rows << std::endl;
 
 			//display Resize Image function
-			displayResizeImg(*move, image.cols, image.rows, cParam, rParam);
+			displayResizeImg(*move, image.cols, image.rows, cParam, rParam, fileType, aspectFlag, grayscaleFlag);
 
 			// Display grayscale image
 			//cv::imshow("Grayscale Rendering", img_gray);
@@ -260,7 +262,7 @@ int depthfirstapply(char* path, std::list <std::string>& fileList) {
 	return 0;
 }
 
-void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, int fileType, bool aspectFlag, bool grayscaleFlag) {
+void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, std::string fileType, bool aspectFlag, bool grayscaleFlag) {
 	//we are going to use this function to detect aspect ratio
 
 	cv::Mat image = cv::imread(path);
