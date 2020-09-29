@@ -106,9 +106,12 @@ int main(int argc, char** const argv)
 		printf("aspect initiated!\n");
 
 	fileType = parser.get<std::string>("t");
-	if (fileType.find('.') == std::string::npos && fileType.compare("<none>") != 0 )
+
+	std::cout << fileType.find("<none>") << std::endl;
+	if (fileType.find('.') == std::string::npos && fileType.find("<none>") == std::string::npos) {
 		//we didn't find the . on the file extension
 		fileType.insert(0, ".");
+	}
 
 	printf("fileType: %s\n", fileType.c_str());
 
@@ -121,6 +124,8 @@ int main(int argc, char** const argv)
 
 	outDir = parser.get<std::string>(1);
 
+	printf("outPath: %s\n", outDir.c_str());
+
 	// experiment with xml later. For now I'll use metadata text to write what I need to write.
 	std::string in_metadata_file = fileDir + "\\metadata.txt";
 	std::string out_metadata_file = outDir + "\\metadata.txt";
@@ -128,6 +133,7 @@ int main(int argc, char** const argv)
 	printf("%s\n", in_metadata_file.c_str());
 
 	in_dir_file.open(in_metadata_file);
+	out_dir_file.open(out_metadata_file);
 
 	if (!parser.check())
 	{
@@ -174,7 +180,8 @@ int main(int argc, char** const argv)
 			if (image.empty()) {
 				//erase the file off of the vector instead of throwing error.
 				printf("Cannot open input image is not a file.\n");
-				move++;
+				vecOfFile.erase(move);
+				move--;
 			}
 
 			// Read the same image as grayscale image.
@@ -234,8 +241,10 @@ int main(int argc, char** const argv)
 		return (1);
 	}
 
-	//closing file
+	//closing files
 	in_dir_file.close();
+	out_dir_file.close();
+
 	return (0);
 }
 
@@ -312,6 +321,17 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 		return;
 	}
 
+	std::size_t found = path.find_last_of("/\\");
+	std::string save_file = path.substr(found + 1);
+	std::cout << "path: " << path.substr(0, found) << '\n';
+	std::cout << "save_file: " << save_file << '\n';
+
+	//writing to the out metadata file
+	in_dir_file << "directory: " << path << std::endl;
+	in_dir_file << "filename: " << path.substr(found + 1) << std::endl;
+	in_dir_file << "Resized size is: " << image.cols << "x" << image.rows << std::endl;
+	in_dir_file << "Pixel size: " << image.cols * image.rows << std::endl << std::endl;
+
 	// Read the same image as grayscale image.
 	cv::Mat img_gray = cv::imread(path, cv::IMREAD_GRAYSCALE);
 
@@ -330,7 +350,7 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 	DIR* dirp;
 	struct stat statbuf;
 
-	//we have two ways:
+	//we have two ways to deduce 1 dimension using dominant dimension from the image:
 	// to find newHeight: newHeight = ( oldHeight / oldWidth ) * newWidth
 	// to find newWidth: newWidth = newHeight / ( oldHeight / oldWidth )
 
@@ -446,11 +466,6 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 	int ColumnOfNewImage = newWidth;
 	int RowsOfNewImage = newHeight;
 
-	std::size_t found = path.find_last_of("/\\");
-	std::string save_file = path.substr(found + 1);
-	std::cout << "path: " << path.substr(0, found) << '\n';
-	std::cout << "save_file: " << save_file << '\n';
-
 	if (grayscaleFlag == false) {
 		//for now let's implement the resize function
 		cv::resize(image, Resized, cv::Size(ColumnOfNewImage, RowsOfNewImage));
@@ -464,7 +479,7 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 
 		cv::imwrite(save_path, Resized);
 
-		if (fileType.compare("<none>") !=0 ) {
+		if (fileType.find("<none>") == std::string::npos) {
 			save_file.erase( save_file.find("."), save_file.length() - 1 );
 
 			//debug output
@@ -472,6 +487,12 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 
 			save_file.append(fileType);
 		}
+
+		//writing to the out metadata file
+		out_dir_file << "directory: " << outDir << std::endl;
+		out_dir_file << "filename: " << save_file << std::endl;
+		out_dir_file << "Resized size is: " << Resized.cols << "x" << Resized.rows << std::endl;
+		out_dir_file << "Pixel size: " << Resized.cols * Resized.rows << std::endl << std::endl;
 
 		// Resized image dimensions
 		std::cout << "\nResized size is: " << Resized.cols << "x" << Resized.rows << std::endl;
@@ -490,13 +511,13 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 		std::string gray_pic_save_path = outDir;
 		save_file.insert( save_file.find_last_of("."), "_gray");
 
-		if (fileType.compare("<none>") != 0) {
+		if (fileType.find("<none>") == std::string::npos) {
 			save_file.erase(save_file.find("."), save_file.length() - 1);
 
-			//debug output
-			//printf("%s\n", save_file.c_str());
-
 			save_file.append(fileType);
+			
+			//debug output
+			printf("%s\n", save_file.c_str());
 		}
 
 		gray_pic_save_path.append("\\" + save_file);
@@ -505,6 +526,12 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 		printf("gray_pic_save_path: %s", gray_pic_save_path.c_str());
 
 		cv::imwrite(gray_pic_save_path, Resized_gray);
+
+		//writing to the out metadata file
+		out_dir_file << "directory: " << outDir << std::endl;
+		out_dir_file << "filename: " << save_file << std::endl;
+		out_dir_file << "Resized size is: " << Resized_gray.cols << "x" << Resized_gray.rows << std::endl;
+		out_dir_file << "Pixel size: " << Resized_gray.cols * Resized_gray.rows << std::endl << std::endl;
 
 		// Resized gray image dimensions
 		std::cout << "\nResized size is: " << Resized_gray.cols << "x" << Resized_gray.rows << std::endl;
