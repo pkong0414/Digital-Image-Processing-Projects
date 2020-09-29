@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <vector>
 #include <list>
+#include <fstream>
 
 #define MAX_PATH 255
 
@@ -26,6 +27,13 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 void downScaleImage(std::string path);
 
 //global variables
+
+//this file will write the metadata for the image files in the directory
+static std::ofstream in_dir_file;
+
+//this file will write the metadata for the image files saved.
+static std::ofstream out_dir_file;
+
 static std::string outDir;
 bool aspectFlag = false;
 bool grayscaleFlag = false;
@@ -42,7 +50,7 @@ int main(int argc, char** const argv)
 	//row and column parameters
 	int rParam;
 	int cParam;
-	
+
 	std::string fileType;
 	int key = 0;
 
@@ -98,20 +106,28 @@ int main(int argc, char** const argv)
 		printf("aspect initiated!\n");
 
 	fileType = parser.get<std::string>("t");
-	if (fileType.find('.') == std::string::npos)
+	if (fileType.find('.') == std::string::npos && fileType.compare("<none>") != 0 )
 		//we didn't find the . on the file extension
 		fileType.insert(0, ".");
 
 	printf("fileType: %s\n", fileType.c_str());
 
-	cv::String fileName = parser.get<std::string>(0);
-	std::cout << "fileName: " << fileName << std::endl;
+	cv::String fileDir = parser.get<std::string>(0);
+	std::cout << "fileDir: " << fileDir << std::endl;
 
-	char* filePath = new char[sizeof(fileName)];
-	strcpy_s(filePath, sizeof(fileName), fileName.c_str());
+	char* filePath = new char[sizeof(fileDir)];
+	strcpy_s(filePath, sizeof(fileDir), fileDir.c_str());
 	printf("filePath: %s\n", filePath);
 
 	outDir = parser.get<std::string>(1);
+
+	// experiment with xml later. For now I'll use metadata text to write what I need to write.
+	std::string in_metadata_file = fileDir + "\\metadata.txt";
+	std::string out_metadata_file = outDir + "\\metadata.txt";
+
+	printf("%s\n", in_metadata_file.c_str());
+
+	in_dir_file.open(in_metadata_file);
 
 	if (!parser.check())
 	{
@@ -218,6 +234,8 @@ int main(int argc, char** const argv)
 		return (1);
 	}
 
+	//closing file
+	in_dir_file.close();
 	return (0);
 }
 
@@ -302,9 +320,9 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 	//I found Max screen size to be annoying so I'm using CXFULLSCREEN and CYFULLSCREEN instead
 	//I only need Primary Monitor so these will do the job: SM_CXFULLCREEN ( code: 16 ) / SM_CYFULLSCREEN ( code: 17 ).
 	int ColumnLimit = GetSystemMetrics(16);
-	int ColumnDefault = 1080;
+	int ColumnDefault = 640;
 	int RowLimit = GetSystemMetrics(17);
-	int RowDefault = 720;
+	int RowDefault = 480;
 	int newHeight = 0;
 	int newWidth = 0;
 
@@ -454,7 +472,6 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 
 			save_file.append(fileType);
 		}
-
 
 		// Resized image dimensions
 		std::cout << "\nResized size is: " << Resized.cols << "x" << Resized.rows << std::endl;
