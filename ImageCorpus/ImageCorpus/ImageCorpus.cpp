@@ -21,12 +21,14 @@
 int depthfirstapply(char* path, std::list <std::string>& fileList);
 
 //we'll probably take the image resizing from assignment1
-void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, std::string fileType, bool aspectFlag, bool grayscaleFlag);
+void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, std::string fileType);
 
 void downScaleImage(std::string path);
 
 //global variables
 static std::string outDir;
+bool aspectFlag = false;
+bool grayscaleFlag = false;
 
 int main(int argc, char** const argv)
 {
@@ -40,8 +42,7 @@ int main(int argc, char** const argv)
 	//row and column parameters
 	int rParam;
 	int cParam;
-	bool aspectFlag = false;
-	bool grayscaleFlag = false;
+	
 	std::string fileType;
 	int key = 0;
 
@@ -56,7 +57,7 @@ int main(int argc, char** const argv)
 		"{gray g			|		| Saves the output images as grayscale [default:saves as input]					}"
 		"{rows r			|	480	| Maximum number of rows in the output image [default: 480]						}"
 		"{cols c			|	640	| Maximum number of columns in the output [default: 640]						}"
-		"{@type t			|<none>	| Output img type ( jpg, tif, bmp, or png) [0: default original file is retained] }"
+		"{type t			|<none>	| Output img type ( jpg, tif, bmp, or png) [0: default original file is retained] }"
 	};
 
 	//work on this later
@@ -71,26 +72,31 @@ int main(int argc, char** const argv)
 
 	rParam = parser.get<int>("rows");
 	cParam = parser.get<int>("cols");
+
+	printf("row: %d\n", rParam);
+	printf("col: %d\n", cParam);
+
 	if (parser.has("gray")) {
+		//debugging output
+		printf("grayscale initiated!\n");
+
 		grayscaleFlag = true;
 	}
 	if (parser.has("aspect")) {
+		//debugging output
+		printf("aspect initiated!\n");
+
 		aspectFlag = true;
 	}
-	if (parser.has("type")) {
-		fileType = parser.get<cv::String>(2);
-	}
-	outDir = parser.get<std::string>(1);
 
-	cv::String fileName = parser.get<cv::String>(0);
+	cv::String fileName = parser.get<std::string>(0);
 	std::cout << "fileName: " << fileName << std::endl;
 
 	char* filePath = new char[sizeof(fileName)];
 	strcpy_s(filePath, sizeof(fileName), fileName.c_str());
 	printf("filePath: %s\n", filePath);
 
-	printf("row: %d\n", rParam);
-	printf("col: %d\n", cParam);
+	outDir = parser.get<std::string>(1);
 
 	if (!parser.check())
 	{
@@ -144,7 +150,7 @@ int main(int argc, char** const argv)
 			//cv::Mat img_gray = cv::imread(*move, cv::IMREAD_GRAYSCALE);
 
 			// Display color image
-			cv::imshow(*move, image);
+			//cv::imshow(*move, image);
 
 			// filepath name
 			std::cout << "filename: " << *move << std::endl;
@@ -154,7 +160,7 @@ int main(int argc, char** const argv)
 			std::cout << "Pixel size: " << image.cols * image.rows << std::endl;
 
 			//display Resize Image function
-			displayResizeImg(*move, image.cols, image.rows, cParam, rParam, fileType, aspectFlag, grayscaleFlag);
+			displayResizeImg(*move, image.cols, image.rows, cParam, rParam, fileType);
 
 			// Display grayscale image
 			//cv::imshow("Grayscale Rendering", img_gray);
@@ -220,7 +226,7 @@ int depthfirstapply(char* path, std::list <std::string>& fileList) {
 	//strcat( path, "/" );
 
 	if ((dirp = opendir(path)) == NULL) {
-		perror("Failed to open directory.");
+		perror("Failed to open directory");
 		return 1;
 	}
 
@@ -262,11 +268,20 @@ int depthfirstapply(char* path, std::list <std::string>& fileList) {
 	return 0;
 }
 
-void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, std::string fileType, bool aspectFlag, bool grayscaleFlag) {
+void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, std::string fileType) {
 	//we are going to use this function to detect aspect ratio
 
+	// Reading image
 	cv::Mat image = cv::imread(path);
-	double aspectRatio;
+
+	if (image.empty()) {
+		throw (std::string("Cannot open input image "));
+		return;
+	}
+
+	// Read the same image as grayscale image.
+	cv::Mat img_gray = cv::imread(path, cv::IMREAD_GRAYSCALE);
+
 	//screen limitations
 	//we'll be using int GetSystemMetrics( code ) to get the screen of the primary monitor;
 	//I found Max screen size to be annoying so I'm using CXFULLSCREEN and CYFULLSCREEN instead
@@ -277,6 +292,10 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 	int RowDefault = 720;
 	int newHeight = 0;
 	int newWidth = 0;
+
+	struct dirent* direntp;
+	DIR* dirp;
+	struct stat statbuf;
 
 	//we have two ways:
 	// to find newHeight: newHeight = ( oldHeight / oldWidth ) * newWidth
@@ -390,8 +409,14 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 	}
 
 	cv::Mat Resized;
+	cv::Mat Resized_gray;
 	int ColumnOfNewImage = newWidth;
 	int RowsOfNewImage = newHeight;
+
+	std::size_t found = path.find_last_of("/\\");
+	std::string save_file = path.substr(found + 1);
+	std::cout << "path: " << path.substr(0, found) << '\n';
+	std::cout << "save_file: " << save_file << '\n';
 
 	if (grayscaleFlag == false) {
 		//for now let's implement the resize function
@@ -400,29 +425,38 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 		//Display resized image.
 		cv::imshow("Resized Image", Resized);
 
+		std::string save_path = outDir;
+
+		save_path.append("\\" + save_file);
+
+		cv::imwrite(save_path, Resized);
+
 	}
 	if (grayscaleFlag == true) {
-		// Read the same image as grayscale image.
-		cv::Mat img_gray = cv::imread(path, cv::IMREAD_GRAYSCALE);
+		
+		cv::resize(img_gray, Resized_gray, cv::Size(ColumnOfNewImage, RowsOfNewImage));
 
 		// Display grayscale image
-		cv::imshow("Grayscale Rendering", img_gray);
-		cv::waitKey();
+		cv::imshow("Grayscale Rendering", Resized_gray);
 
 		// Save a copy of grayscale image in a file on disk.
-		std::string gray_pic_file = path;
-		gray_pic_file.insert(gray_pic_file.find_last_of('.'), "_gray");
-		cv::imwrite(gray_pic_file, img_gray);
+		std::string gray_pic_save_path = outDir;
+
+		gray_pic_save_path.append("\\" + save_file);
+
+		//debugging output
+		printf("gray_pic_save_path: %s", gray_pic_save_path.c_str());
+
+		cv::imwrite(gray_pic_save_path, Resized_gray);
 	}
 
 	// Resized image dimensions
-	std::cout << "\nResized size is: " << Resized.cols << "x" << Resized.rows << std::endl;
+	std::cout << "\nResized size is: " << Resized_gray.cols << "x" << Resized_gray.rows << std::endl;
 	// Resized pixel size
-	std::cout << "Pixel size: " << Resized.cols * Resized.rows << std::endl << std::endl;
+	std::cout << "Pixel size: " << Resized_gray.cols * Resized_gray.rows << std::endl << std::endl;
 
 
 	//TODO: need to create a way to write metadata.
-
 
 	return;
 }
