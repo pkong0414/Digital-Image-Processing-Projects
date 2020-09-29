@@ -24,8 +24,6 @@ int depthfirstapply(char* path, std::list <std::string>& fileList);
 //we'll probably take the image resizing from assignment1
 void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, std::string fileType);
 
-void downScaleImage(std::string path);
-
 //global variables
 
 //this file will write the metadata for the image files in the directory
@@ -545,11 +543,6 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 	//TODO: need to create a way to write metadata.
 
 	return;
-}
-
-void downScaleImage(std::string path) {
-	//downscaling images a shrinking of the original images and returning it back to its original dimensions.
-
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
