@@ -20,8 +20,13 @@
 
 int depthfirstapply(char* path, std::list <std::string>& fileList);
 
-void upScaleImage(std::string path);
+//we'll probably take the image resizing from assignment1
+void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, int fileType, bool aspectFlag, bool grayscaleFlag);
+
 void downScaleImage(std::string path);
+
+//global variables
+static std::string outDir;
 
 int main(int argc, char** const argv)
 {
@@ -37,20 +42,21 @@ int main(int argc, char** const argv)
 	int cParam;
 	bool aspectFlag;
 	bool grayscaleFlag;
+	int type;
 	int key = 0;
+
 	std::string currentImage;
 
 	const cv::String keys =
 	{
 		"{help h usage ?	|       | print this message															}"
-		"{@directory		|<none> | Directory that contains the pictures to browse								}"
-		"{@indir			|		| Input Directory.																}"
+		"{@indir			|<none>	| Input Directory.																}"
 		"{@outdir			|		| Output Directory.																}"
-		"{aspect a			|	    | if specified preserves the aspect ratio of the images							}"
-		"{gray g			|		| Saves the output images as grayscale [default:saves as input]					}"
+		"{aspect a			|	1   | if specified preserves the aspect ratio of the images							}"
+		"{gray g			|	0	| Saves the output images as grayscale [default:saves as input]					}"
 		"{rows r			|	480	| Maximum number of rows in the output image [default: 480]						}"
 		"{cols c			|	640	| Maximum number of columns in the output [default: 640]						}"
-		"{type t			|		| Output img type ( jpg, tif, bmp, or png) [default: original file is retained] }"
+		"{type t			|	0	| Output img type ( 1:jpg, 2:tif, 3:bmp, or 4:png) [0: default original file is retained] }"
 	};
 
 	//work on this later
@@ -66,6 +72,15 @@ int main(int argc, char** const argv)
 	rParam = parser.get<int>("rows");
 	cParam = parser.get<int>("cols");
 
+	outDir = parser.get<std::string>(1);
+
+	cv::String fileName = parser.get<cv::String>(0);
+	std::cout << "fileName: " << fileName << std::endl;
+
+	char* filePath = new char[sizeof(fileName)];
+	strcpy_s(filePath, sizeof(fileName), fileName.c_str());
+	printf("filePath: %s\n", filePath);
+
 	printf("row: %d\n", rParam);
 	printf("col: %d\n", cParam);
 
@@ -80,6 +95,107 @@ int main(int argc, char** const argv)
 		parser.printErrors();
 		return 0;
 	}
+
+
+
+	try
+	{
+		std::list <std::string> fileResult;
+
+		//debugging parameter argument output
+		/*
+		for (int c = 0; c < argc; c++) {
+			std::cout << "argv[" << c << "]: " << argv[c] << std::endl;
+		}
+		*/
+
+		if (argc >= 2)
+		{
+			//std::cerr << "usage: " << argv[0] << " image_file" << std::endl;
+			depthfirstapply(filePath, fileResult);
+		}
+
+		//testing output
+		// Vector with std::list
+		std::vector < std::string > vecOfFile(fileResult.begin(), fileResult.end());
+		std::vector<std::string>::iterator move;
+		//testing output
+
+
+		move = vecOfFile.begin();
+		while (key != 'q') {
+			//case to go next image
+
+			// NOTE: Consider that there may not be a file that is not an image.
+
+			// Read the image
+			cv::Mat image = cv::imread(*move);
+
+			// Make sure that the image is read properly.
+			if (image.empty()) {
+				//erase the file off of the vector instead of throwing error.
+				printf("Cannot open input image is not a file.\n");
+				move++;
+			}
+
+			// Read the same image as grayscale image.
+			//cv::Mat img_gray = cv::imread(*move, cv::IMREAD_GRAYSCALE);
+
+			// Display color image
+			cv::imshow(*move, image);
+
+			// filepath name
+			std::cout << "filename: " << *move << std::endl;
+			// Image dimensions
+			std::cout << "Image size is: " << image.cols << "x" << image.rows << std::endl;
+			// Image pixel size
+			std::cout << "Pixel size: " << image.cols * image.rows << std::endl;
+
+			//display Resize Image function
+			displayResizeImg(*move, image.cols, image.rows, cParam, rParam);
+
+			// Display grayscale image
+			//cv::imshow("Grayscale Rendering", img_gray);
+
+			//uchar pxl_gray = img_gray.at<uchar>(r, c);
+			//std::cout << "Gray scale pixel at (" << r << "," << c << ") = " << (int)pxl_gray << std::endl;
+
+			//keypress wait
+			key = cv::waitKeyEx(0);
+			cv::destroyAllWindows();
+
+			if (key == ' ' || key == 'n') {
+				if (move != vecOfFile.end()) {
+					++move;
+				}
+				if (move == vecOfFile.end()) {
+					return (0);
+				}
+			}
+			//case to go to previous image
+			if (key == 'p') {
+				if (move != vecOfFile.begin()) {
+					move--;
+				}
+				else {
+					return (0);
+
+				}
+			}
+		}
+	}
+	catch (std::string& str)
+	{
+		std::cerr << "Error: " << argv[0] << ": " << str << std::endl;
+		return (1);
+	}
+	catch (cv::Exception& e)
+	{
+		std::cerr << "Error: " << argv[0] << ": " << e.msg << std::endl;
+		return (1);
+	}
+
+	return (0);
 }
 
 int depthfirstapply(char* path, std::list <std::string>& fileList) {
@@ -144,13 +260,173 @@ int depthfirstapply(char* path, std::list <std::string>& fileList) {
 	return 0;
 }
 
-void upScaleImage(std::string path) {
+void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, int fileType, bool aspectFlag, bool grayscaleFlag) {
+	//we are going to use this function to detect aspect ratio
+
+	cv::Mat image = cv::imread(path);
+	double aspectRatio;
+	//screen limitations
+	//we'll be using int GetSystemMetrics( code ) to get the screen of the primary monitor;
+	//I found Max screen size to be annoying so I'm using CXFULLSCREEN and CYFULLSCREEN instead
+	//I only need Primary Monitor so these will do the job: SM_CXFULLCREEN ( code: 16 ) / SM_CYFULLSCREEN ( code: 17 ).
+	int ColumnLimit = GetSystemMetrics(16);
+	int ColumnDefault = 1080;
+	int RowLimit = GetSystemMetrics(17);
+	int RowDefault = 720;
+	int newHeight = 0;
+	int newWidth = 0;
+
+	//we have two ways:
+	// to find newHeight: newHeight = ( oldHeight / oldWidth ) * newWidth
+	// to find newWidth: newWidth = newHeight / ( oldHeight / oldWidth )
+
+	//there are cases to consider:
+		//PRIORITY: WE MUST MAINTAIN ASPECT RATIO!
+		//PRIORITY: WE ALSO MUST KEEP WITHIN SCREEN SIZE
+			//1. The normal condition. Assuming both the image and the user entered parameters that does not exceed screen size.
+			//2. The image is greater than the screen allows and must be set to to the proposed parameters.
+				//2.a. The proposed parameters is smaller than the screen and therefore will proceed accordingly
+				//2.b. The proposed parameters is greater than the screen and will be set to MAXIMUM space allowed, while respecting aspect ratio.
+			//3. The image is acceptable to screensize, but the parameters exceed that of the screen allowance.
+
+	//This is case 2
+	if (aspectFlag == true) {
+		if (oldWidth > ColumnLimit || oldHeight > RowLimit) {
+			if (oldWidth > ColumnLimit && oldHeight > RowLimit) {
+				//In this case we have an image where both Columns and Rows exceed screensize.
+				if (oldWidth > oldHeight) {
+					//if original image Column is bigger than the image Height, we'll base the new dimensions on columns first!
+					if (newCols <= ColumnLimit) {
+						//case 2.a
+						//User parameters did not exceed our screensize.
+						newWidth = newCols;
+						newHeight = ((double)oldHeight / (double)oldWidth) * newWidth;
+					}
+					else
+					{
+						//case 2.b
+						//User parameters exceed screensize.
+						newWidth = ColumnLimit;
+						newHeight = ((double)oldHeight / (double)oldWidth) * newWidth;
+					}
+				}
+				else {
+					//if original image Row is bigger than the image Column, we'll base the new dimensions on row first!
+					if (newRows <= RowLimit) {
+						//User parameter did not exceed our screensize.
+						newHeight = newRows;
+						newWidth = newHeight / ((double)oldHeight / (double)oldWidth);
+					}
+					else
+					{
+						//User parameter exceed screensize.
+						newHeight = RowLimit;
+						newWidth = newHeight / ((double)oldHeight / (double)oldWidth);
+					}
+				}
+			}
+			else if (oldWidth > ColumnLimit && oldHeight < RowLimit) {
+				//In this case we have Columns that exceed screensize, we must prioritize Columns as the default newWidth
+
+				if (newCols > ColumnLimit) {
+					//Assuming the user input exceeds screensize.
+					newWidth = ColumnLimit;
+					newHeight = ((double)oldHeight / (double)oldWidth) * newWidth;
+				}
+				else {
+					//Assuming the user input does not exceed screensize.
+					newWidth = newCols;
+					newHeight = newHeight = ((double)oldHeight / (double)oldWidth) * newWidth;
+				}
+			}
+			else if (oldHeight > RowLimit && oldWidth < ColumnLimit) {
+				//In this case we have Rows that exceed screensize, we must prioritize Rows as the default newHeight
+				if (newRows > RowLimit) {
+					//Assuming the user input exceeds screensize.
+					newHeight = RowLimit;
+					newWidth = newHeight / ((double)oldHeight / (double)oldWidth);
+				}
+				else {
+					//Assuming the user input does not exceed screensize.
+					newHeight = newRows;
+					newWidth = newHeight / ((double)oldHeight / (double)oldWidth);
+				}
+			}
+		}
+		else {
+			//This is case 3
+			//This is case 1
+			if (oldWidth > oldHeight) {
+				//if oldCols is bigger, we'll base the new dimensions on columns first!
+				if (newCols > ColumnLimit) {
+					//Assuming the user input exceeds screensize.
+					newWidth = ColumnLimit;
+					newHeight = ((double)oldHeight / (double)oldWidth) * newWidth;
+				}
+				else {
+					//Assuming the user input does not exceed screensize.
+					newWidth = newCols;
+					newHeight = ((double)oldHeight / (double)oldWidth) * newWidth;
+				}
+			}
+			else {
+				if (newRows > RowLimit) {
+					//Assuming the user input exceeds screensize.
+					newHeight = RowLimit;
+					newWidth = newHeight / ((double)oldHeight / (double)oldWidth);
+				}
+				else {
+					newHeight = newRows;
+					newWidth = newHeight / ((double)oldHeight / (double)oldWidth);
+				}
+			}
+		}
+	} else {
+		//if aspectFlag is false
+		newHeight = newRows;
+		newWidth = newCols;
+	}
+
+	cv::Mat Resized;
+	int ColumnOfNewImage = newWidth;
+	int RowsOfNewImage = newHeight;
+
+	if (grayscaleFlag == false) {
+		//for now let's implement the resize function
+		cv::resize(image, Resized, cv::Size(ColumnOfNewImage, RowsOfNewImage));
+
+		//Display resized image.
+		cv::imshow("Resized Image", Resized);
+
+	}
+	if (grayscaleFlag == true) {
+		// Read the same image as grayscale image.
+		cv::Mat img_gray = cv::imread(path, cv::IMREAD_GRAYSCALE);
+
+		// Display grayscale image
+		cv::imshow("Grayscale Rendering", img_gray);
+		cv::waitKey();
+
+		// Save a copy of grayscale image in a file on disk.
+		std::string gray_pic_file = path;
+		gray_pic_file.insert(gray_pic_file.find_last_of('.'), "_gray");
+		cv::imwrite(gray_pic_file, img_gray);
+	}
+
+	// Resized image dimensions
+	std::cout << "\nResized size is: " << Resized.cols << "x" << Resized.rows << std::endl;
+	// Resized pixel size
+	std::cout << "Pixel size: " << Resized.cols * Resized.rows << std::endl << std::endl;
 
 
+	//TODO: need to create a way to write metadata.
+
+
+	return;
 }
 
 void downScaleImage(std::string path) {
-	//downscaling images a shrinking of the original images and returning it back to its original dimensions
+	//downscaling images a shrinking of the original images and returning it back to its original dimensions.
 
 }
 
