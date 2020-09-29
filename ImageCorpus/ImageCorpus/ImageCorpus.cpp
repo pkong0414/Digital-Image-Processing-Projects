@@ -31,8 +31,9 @@ static std::ofstream in_dir_file;
 
 //this file will write the metadata for the image files saved.
 static std::ofstream out_dir_file;
-
 static std::string outDir;
+
+//boolean flags
 bool aspectFlag = false;
 bool grayscaleFlag = false;
 
@@ -80,7 +81,7 @@ int main(int argc, char** const argv)
 	if (parser.has("a")) {
 		// it appears debug mode will always make parameters true
 		// take note to make it false to test false conditions.
-		aspectFlag = false;
+		aspectFlag = true;
 	}
 
 	if (parser.has("g")) {
