@@ -31,9 +31,8 @@ static std::ofstream in_dir_file;
 
 //this file will write the metadata for the image files saved.
 static std::ofstream out_dir_file;
-static std::string outDir;
 
-//boolean flags
+static std::string outDir;
 bool aspectFlag = false;
 bool grayscaleFlag = false;
 
@@ -57,14 +56,14 @@ int main(int argc, char** const argv)
 
 	const char* keys =
 	{
-		"{ help h usage ?	|       | print this message															}"
-		"{ @indir			|<none>	| Input Directory.																}"
-		"{ @outdir			|		| Output Directory.																}"
-		"{ a aspect			|		| if specified preserves the aspect ratio of the images							}"
-		"{ g gray			|		| Saves the output images as grayscale [default:saves as input]					}"
-		"{ r rows			|	480	| Maximum number of rows in the output image [default: 480]						}"
-		"{ c cols			|	640	| Maximum number of columns in the output [default: 640]						}"
-		"{ t type			|<none>	| Output img type ( jpg, tif, bmp, or png) [default original file is retained]  }"
+		"{ help h usage ?	|      | print this message															}"
+		"{ @indir           |<none>| Input Directory.																}"
+		"{ @outdir          |      | Output Directory.																}"
+		"{ aspect a         |<none>| if specified preserves the aspect ratio of the images							}"
+		"{ gray g           |<none>| Saves the output images as grayscale [default:saves as input]					}"
+		"{ r rows           |480| Maximum number of rows in the output image [default: 480]						}"
+		"{ c cols           |640| Maximum number of columns in the output [default: 640]						}"
+		"{ t type           |<none>| Output img type ( jpg, tif, bmp, or png) [default original file is retained]  }"
 	};
 
 	//work on this later
@@ -77,14 +76,14 @@ int main(int argc, char** const argv)
 		return EXIT_SUCCESS;
 	}
 
-	std::cout << parser.has("a") << std::endl;
-	if (parser.has("a")) {
+	std::cout << parser.has("aspect") << std::endl;
+	if (parser.has("aspect")) {
 		// it appears debug mode will always make parameters true
 		// take note to make it false to test false conditions.
 		aspectFlag = true;
 	}
 
-	if (parser.has("g")) {
+	if (parser.has("gray")) {
 		
 
 		grayscaleFlag = true;
@@ -165,7 +164,8 @@ int main(int argc, char** const argv)
 		std::vector<std::string>::iterator move;
 		//testing output
 
-
+		int currentIndex;
+		cv::Mat image;
 		move = vecOfFile.begin();
 		while (key != 'q') {
 			//case to go next image
@@ -173,15 +173,21 @@ int main(int argc, char** const argv)
 			// NOTE: Consider that there may not be a file that is not an image.
 
 			// Read the image
-			cv::Mat image = cv::imread(*move);
+			image = cv::imread(*move);
 
 			// Make sure that the image is read properly.
 			if (image.empty()) {
 				//erase the file off of the vector instead of throwing error.
+				std::cout << "filename: " << *move << std::endl;
+				std::vector<std::string>::iterator temp = move;
+				temp--;
+				std::cout << "filename (temp): " << *temp << std::endl;
 				printf("Cannot open input image is not a file.\n");
-				vecOfFile.erase(move);
-				move--;
+				vecOfFile.erase( move );
+				move = temp;
+				image = cv::imread(*move);
 			}
+
 
 			// Read the same image as grayscale image.
 			//cv::Mat img_gray = cv::imread(*move, cv::IMREAD_GRAYSCALE);
@@ -328,7 +334,7 @@ void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols
 	//writing to the out metadata file
 	in_dir_file << "directory: " << path << std::endl;
 	in_dir_file << "filename: " << path.substr(found + 1) << std::endl;
-	in_dir_file << "Resized size is: " << image.cols << "x" << image.rows << std::endl;
+	in_dir_file << "Image size is: " << image.cols << "x" << image.rows << std::endl;
 	in_dir_file << "Pixel size: " << image.cols * image.rows << std::endl << std::endl;
 
 	// Read the same image as grayscale image.
