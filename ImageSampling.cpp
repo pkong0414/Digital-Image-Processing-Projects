@@ -7,6 +7,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <math.h>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -18,11 +19,11 @@
 #define MAX_PATH 255
 
 //function prototypes
-cv::Mat pixelDeletion( cv::Mat image );
-cv::Mat pixelReplication( cv::Mat image );
-cv::Mat averagingDownSamp(cv::Mat image );
-void nearestNeighbor(std::string path );
-void adjustGammaIntensity(std::string path);
+cv::Mat pixelDeletion(cv::Mat image, bool grayScale);
+cv::Mat pixelReplication( cv::Mat image, bool grayScale);
+cv::Mat averagingDownSamp(cv::Mat image, bool grayScale);
+cv::Mat interpolationUpSamp(cv::Mat image, bool grayScale);
+cv::Mat adjustGammaIntensity(cv::Mat image, int intensity);
 
 //global variables
 
@@ -93,19 +94,19 @@ int main(int argc, char** const argv)
 	
 	//getting i parameter
 	if (parser.get<int>("i") < 1) {
-		iParam = 1;
+		iParam = 1 - 1;
 	}
 	else if (parser.get<int>("i") > 7) {
-		iParam = 7;
+		iParam = 7 - 1;
 	}
 	else {
-		iParam = parser.get<int>("i");
+		iParam = parser.get<int>("i") - 1;
 	}
 	
 
 	printf("sample: %d\n", sParam);
 	printf("depth: %d\n", dParam);
-	printf("intensity: %d\n", iParam);
+	printf("intensity: %d\n", iParam + 1);
 
 	cv::String imageFile = parser.get<std::string>(0);
 	printf("Image file: %s\n", imageFile.c_str());
@@ -113,10 +114,20 @@ int main(int argc, char** const argv)
 	//Matrix vars for sampling 1
 	cv::Mat pixDelImage;
 	cv::Mat pixRelImage;
+	cv::Mat grayDelImage;
+	cv::Mat grayRelImage;
 
 	//Matrix vars for sampling 2
 	cv::Mat pixAvgImage;
 	cv::Mat pixInterpImage;
+	cv::Mat grayAvgImage;
+	cv::Mat grayInterpImage;
+
+	//Matrix var for gamma correction
+	cv::Mat gammaCorrectImage;
+	cv::Mat grayGammaCorrectImage;
+
+	int d = 1;
 
 	if (!parser.check())
 	{
@@ -127,6 +138,7 @@ int main(int argc, char** const argv)
 	try
 	{
 		cv::Mat image = cv::imread(imageFile);
+		cv::Mat grayImage = cv::imread(imageFile, cv::IMREAD_GRAYSCALE);
 
 		// Make sure that the image is read properly.
 		if (image.empty()) {
@@ -135,40 +147,95 @@ int main(int argc, char** const argv)
 		}
 
 		cv::imshow("Source Image", image);
+		cv::imshow("Gray Source Image", grayImage);
+
 		//keypress wait
 		key = cv::waitKeyEx(0);
+
+		//destroying all windows
+		cv::destroyAllWindows();
+
 		if (sParam == 1) {
 
-			pixDelImage = pixelDeletion(image);
+			pixDelImage = pixelDeletion(image, 0);
+			grayDelImage = pixelDeletion(grayImage, 1);
 			if (dParam > 1) {
-				int d = 1;
 				while (d != dParam) {
-					pixDelImage = pixelDeletion(pixDelImage);
+					pixDelImage = pixelDeletion(pixDelImage, 0);
+					grayDelImage = pixelDeletion(grayDelImage, 1);
 					d++;
 				}
 			}
-			pixRelImage = pixelReplication(image);
+			pixRelImage = pixelReplication(image, 0);
+			grayRelImage = pixelReplication(grayImage, 1);
+
+			//gamma correction
+			gammaCorrectImage = adjustGammaIntensity(image, iParam);
+			grayGammaCorrectImage = adjustGammaIntensity(grayImage, iParam);
 			
 			//displaying output after finished
 			cv::imshow("pixel deleted downsample", pixDelImage);
+			cv::imshow("grayscale pixel deleted downsample", grayDelImage);
+
+			//keypress wait
+			key = cv::waitKeyEx(0);
+			cv::destroyAllWindows();
+
 			cv::imshow("pixel replicated upsample", pixRelImage);
+			cv::imshow("grayscale pixel replicated sample", grayRelImage);
+
+			//keypress wait
+			key = cv::waitKeyEx(0);
+			cv::destroyAllWindows();
+
+			cv::imshow("gamma corrected sample", gammaCorrectImage);
+			cv::imshow("grayscale gamma corrected sample", grayGammaCorrectImage);
+
+			//keypress wait
+			key = cv::waitKeyEx(0);
+			cv::destroyAllWindows();
 		}
 
 		if (sParam == 2) {
-			int d = 1;
-
-			pixAvgImage = averagingDownSamp(image);
-			//pixInterpImage;
+			pixAvgImage = averagingDownSamp(image, 0);
+			grayAvgImage = averagingDownSamp(grayImage, 1);
 			while (d != dParam) {
-
+				pixAvgImage = averagingDownSamp(pixAvgImage, 0);
+				grayAvgImage = averagingDownSamp(grayAvgImage, 1);
+				d++;
 			}
+			pixInterpImage = interpolationUpSamp(image, 0);
+			grayInterpImage = interpolationUpSamp(grayImage, 1);
 
+			//gamma correction
+			gammaCorrectImage = adjustGammaIntensity(image, iParam);
+			grayGammaCorrectImage = adjustGammaIntensity(grayImage, iParam);
+
+			//displaying output after finished
+			cv::imshow("averaged pixel downsample", pixAvgImage);
+			cv::imshow("grayscale averaged pixel downsample", grayAvgImage);
+
+			//keypress wait
+			key = cv::waitKeyEx(0);
+
+			cv::destroyAllWindows();
+
+			cv::imshow("interpolation upsample", pixInterpImage);
+			cv::imshow("grayscale interpolation upsample", grayInterpImage);
+
+			//keypress wait
+			key = cv::waitKeyEx(0);
+			cv::destroyAllWindows();
+
+			cv::imshow("gamma corrected sample", gammaCorrectImage);
+			cv::imshow("grayscale gamma corrected sample", grayGammaCorrectImage);
+
+			//keypress wait
+			key = cv::waitKeyEx(0);
+
+			cv::destroyAllWindows();
 		}
 
-		
-
-		//keypress wait
-		key = cv::waitKeyEx(0);
 	}
 
 	catch (std::string& str)
@@ -185,34 +252,23 @@ int main(int argc, char** const argv)
 	return (0);
 }
 
-
-void displayResizeImg(std::string path, int oldWidth, int oldHeight, int newCols, int newRows, std::string fileType) {
-	//we are going to use this function to detect aspect ratio
-
-	// Reading image
-	cv::Mat image = cv::imread(path);
-
-	if (image.empty()) {
-		throw (std::string("Cannot open input image "));
-		return;
-	}
-
-
-
-
-	//TODO: need to create a way to write metadata.
-
-	return;
-}
-
-cv::Mat pixelDeletion( cv::Mat image ) {
+cv::Mat pixelDeletion(cv::Mat image, bool grayScale) {
 	//This function will downsample an image using pixel depletion.
 	printf("image rows: %d, image cols: %d\n", image.rows, image.cols);
 	cv::Mat dest_mat(image.rows / 2, image.cols / 2, image.type());
-
-	for (int c = 0; c < dest_mat.cols; c++) {
-		for (int r = 0; r < dest_mat.rows; r++) {
-			dest_mat.at<cv::Vec3b>(r, c) = image.at<cv::Vec3b>(r * 2, c * 2);
+	
+	if (grayScale == false) {
+		for (int c = 0; c < dest_mat.cols; c++) {
+			for (int r = 0; r < dest_mat.rows; r++) {
+				dest_mat.at<cv::Vec3b>(r, c) = image.at<cv::Vec3b>(r * 2, c * 2);
+			}
+		}
+	}
+	else {
+		for (int c = 0; c < dest_mat.cols; c++) {
+			for (int r = 0; r < dest_mat.rows; r++) {
+				dest_mat.at<uchar>(r, c) = image.at<uchar>(r * 2, c * 2);
+			}
 		}
 	}
 
@@ -221,17 +277,30 @@ cv::Mat pixelDeletion( cv::Mat image ) {
 	return dest_mat;
 }
 
-cv::Mat pixelReplication(cv::Mat image) {
+cv::Mat pixelReplication(cv::Mat image, bool grayScale) {
 	//This function will upsample using pixel replication.
 	cv::Mat dest_mat(image.rows * 2, image.cols * 2, image.type());
 
-	for( int c = 0; c < image.cols; c++ ) {
-		for (int r = 0; r < image.rows; r++) {
-			dest_mat.at<cv::Vec3b>(2* r, 2 * c) = image.at<cv::Vec3b>(r, c);
-			dest_mat.at<cv::Vec3b>(2 * r + 1, 2 * c) = image.at<cv::Vec3b>(r, c);
-			dest_mat.at<cv::Vec3b>(2 * r, 2 * c + 1) = image.at<cv::Vec3b>(r, c);
-			dest_mat.at<cv::Vec3b>(2 * r + 1, 2 * c + 1) = image.at<cv::Vec3b>(r, c);
+	if (grayScale == false) {
+		for (int c = 0; c < image.cols; c++) {
+			for (int r = 0; r < image.rows; r++) {
+				dest_mat.at<cv::Vec3b>(2 * r, 2 * c) = image.at<cv::Vec3b>(r, c);
+				dest_mat.at<cv::Vec3b>(2 * r + 1, 2 * c) = image.at<cv::Vec3b>(r, c);
+				dest_mat.at<cv::Vec3b>(2 * r, 2 * c + 1) = image.at<cv::Vec3b>(r, c);
+				dest_mat.at<cv::Vec3b>(2 * r + 1, 2 * c + 1) = image.at<cv::Vec3b>(r, c);
 
+			}
+		}
+	}
+	else {
+		for (int c = 0; c < image.cols; c++) {
+			for (int r = 0; r < image.rows; r++) {
+				dest_mat.at<uchar>(2 * r, 2 * c) = image.at<uchar>(r, c);
+				dest_mat.at<uchar>(2 * r + 1, 2 * c) = image.at<uchar>(r, c);
+				dest_mat.at<uchar>(2 * r, 2 * c + 1) = image.at<uchar>(r, c);
+				dest_mat.at<uchar>(2 * r + 1, 2 * c + 1) = image.at<uchar>(r, c);
+
+			}
 		}
 	}
 
@@ -240,28 +309,75 @@ cv::Mat pixelReplication(cv::Mat image) {
 	return dest_mat;
 }
 
-cv::Mat averagingDownSamp(cv::Mat image) {
+cv::Mat averagingDownSamp(cv::Mat image, bool grayScale) {
 	//This function will downsample using averaging
 	cv::Mat dest_mat(image.rows / 2, image.cols / 2, image.type());
 
-	for (int c = 0; c < dest_mat.cols; c++) {
-		for (int r = 0; r < dest_mat.rows; r++) {
-			dest_mat.at<cv::Vec3b>(r, c) = ( image.at<cv::Vec3b>(r * 2, c * 2) + image.at<cv::Vec3b>(r * 2 + 1, c * 2) + image.at<cv::Vec3b>(r * 2, c * 2 + 1) + image.at<cv::Vec3b>(r * 2 + 1, c * 2 + 1)) / 4;
+	if (grayScale == false) {
+		for (int c = 0; c < dest_mat.cols; c++) {
+			for (int r = 0; r < dest_mat.rows; r++) {
+				dest_mat.at<cv::Vec3b>(r, c) = (image.at<cv::Vec3b>(r * 2, c * 2) + image.at<cv::Vec3b>(r * 2 + 1, c * 2) + image.at<cv::Vec3b>(r * 2, c * 2 + 1) + image.at<cv::Vec3b>(r * 2 + 1, c * 2 + 1)) / 4;
+			}
+		}
+	}
+	else {
+		for (int c = 0; c < dest_mat.cols; c++) {
+			for (int r = 0; r < dest_mat.rows; r++) {
+				dest_mat.at<uchar>(r, c) = (image.at<uchar>(r * 2, c * 2) + image.at<uchar>(r * 2 + 1, c * 2) + image.at<uchar>(r * 2, c * 2 + 1) + image.at<uchar>(r * 2 + 1, c * 2 + 1)) / 4;
+			}
 		}
 	}
 
 	//debug output
-	cv::imshow("averaging pixel image", dest_mat);
+	//cv::imshow("averaging pixel image", dest_mat);
 	return dest_mat;
 }
 
-void interpolationUpSamp(std::string path) {
+cv::Mat interpolationUpSamp(cv::Mat image, bool grayScale) {
 	//This function will upsample using nearest Neighbor algorithm
+	cv::Mat dest_mat(image.rows * 2, image.cols * 2, image.type());
 
+	if (grayScale == false) {
+		for (int c = 0; c < image.cols - 1; c++) {
+			for (int r = 0; r < image.rows - 1; r++) {
+				dest_mat.at<cv::Vec3b>(2 * r, 2 * c) = image.at<cv::Vec3b>(r, c);
+				dest_mat.at<cv::Vec3b>(2 * r + 1, 2 * c) = (image.at<cv::Vec3b>(r, c) + image.at<cv::Vec3b>(r + 1, c)) / 2;
+				dest_mat.at<cv::Vec3b>(2 * r, 2 * c + 1) = (image.at<cv::Vec3b>(r, c) + image.at<cv::Vec3b>(r, c + 1)) / 2;
+				dest_mat.at<cv::Vec3b>(2 * r + 1, 2 * c + 1) = (image.at<cv::Vec3b>(r, c) + image.at<cv::Vec3b>(r + 1, c) + image.at<cv::Vec3b>(r, c + 1) + image.at<cv::Vec3b>(r + 1, c + 1)) / 4;
+			}
+		}
+	}
+	else {
+		for (int c = 0; c < image.cols - 1; c++) {
+			for (int r = 0; r < image.rows - 1; r++) {
+				dest_mat.at<uchar>(2 * r, 2 * c) = image.at<uchar>(r, c);
+				dest_mat.at<uchar>(2 * r + 1, 2 * c) = (image.at<uchar>(r, c) + image.at<uchar>(r + 1, c)) / 2;
+				dest_mat.at<uchar>(2 * r, 2 * c + 1) = (image.at<uchar>(r, c) + image.at<uchar>(r, c + 1)) / 2;
+				dest_mat.at<uchar>(2 * r + 1, 2 * c + 1) = (image.at<uchar>(r, c) + image.at<uchar>(r + 1, c) + image.at<uchar>(r, c + 1) + image.at<uchar>(r + 1, c + 1)) / 4;
+			}
+		}
+	}
+
+	//debug output
+	//cv::imshow("interpolation up sample image", dest_mat);
+	return dest_mat;
 }
 
-void adjustGammaIntensity(std::string path) {
+cv::Mat adjustGammaIntensity(cv::Mat image, int intensity) {
 	//This function will adjust the image's gamma intensity
+
+	//s = (cr)^gamma
+
+	double gammaValues[7] = { 0.1, 0.5, 1.0, 3.0, 3.5, 4.5, 5.0 };
+	double gammaValue = gammaValues[intensity];
+
+	cv::Mat dest_mat(image.size(), CV_32FC1);
+	image.convertTo(image, CV_32FC1, 1.0 / 255.0);
+
+	cv::pow(image, gammaValue, dest_mat);
+	dest_mat.convertTo(dest_mat, CV_8UC1, 255);
+	
+	return dest_mat;
 
 }
 
