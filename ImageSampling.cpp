@@ -232,7 +232,6 @@ int main(int argc, char** const argv)
 
 			//keypress wait
 			key = cv::waitKeyEx(0);
-
 			cv::destroyAllWindows();
 		}
 
@@ -316,7 +315,9 @@ cv::Mat averagingDownSamp(cv::Mat image, bool grayScale) {
 	if (grayScale == false) {
 		for (int c = 0; c < dest_mat.cols; c++) {
 			for (int r = 0; r < dest_mat.rows; r++) {
-				dest_mat.at<cv::Vec3b>(r, c) = (image.at<cv::Vec3b>(r * 2, c * 2) + image.at<cv::Vec3b>(r * 2 + 1, c * 2) + image.at<cv::Vec3b>(r * 2, c * 2 + 1) + image.at<cv::Vec3b>(r * 2 + 1, c * 2 + 1)) / 4;
+				dest_mat.at<cv::Vec3b>(r, c)[0] = (image.at<cv::Vec3b>(r * 2, c * 2)[0] + image.at<cv::Vec3b>(r * 2 + 1, c * 2)[0] + image.at<cv::Vec3b>(r * 2, c * 2 + 1)[0] + image.at<cv::Vec3b>(r * 2 + 1, c * 2 + 1)[0]) / 4;
+				dest_mat.at<cv::Vec3b>(r, c)[1] = (image.at<cv::Vec3b>(r * 2, c * 2)[1] + image.at<cv::Vec3b>(r * 2 + 1, c * 2)[1] + image.at<cv::Vec3b>(r * 2, c * 2 + 1)[1] + image.at<cv::Vec3b>(r * 2 + 1, c * 2 + 1)[1]) / 4;
+				dest_mat.at<cv::Vec3b>(r, c)[2] = (image.at<cv::Vec3b>(r * 2, c * 2)[2] + image.at<cv::Vec3b>(r * 2 + 1, c * 2)[2] + image.at<cv::Vec3b>(r * 2, c * 2 + 1)[2] + image.at<cv::Vec3b>(r * 2 + 1, c * 2 + 1)[2]) / 4;
 			}
 		}
 	}
